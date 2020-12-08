@@ -1,9 +1,17 @@
 # disas.py
 
+import subprocess
 from capstone import *
 from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
-filename= './vuln_prog1.bin'
+
+filename = './vuln_prog1.bin'
+ret_addrs = []
+
+oflow = ""
+
+subprocess_return = subprocess.run([filename, oflow], capture_output = True)
+
 with open(filename, 'rb') as file:
         elf = ELFFile(file)
         code = elf.get_section_by_name('.text')
@@ -12,6 +20,7 @@ with open(filename, 'rb') as file:
         md = Cs(CS_ARCH_X86, CS_MODE_64)
         for i in md.disasm(ops,addr):
                 print(f'0x{i.address:x}\t{i.mnemonic}\t{i.op_str}')
+
         for section in elf.iter_sections():
                 if isinstance(section, RelocationSection):
                         print(f'{section.name}:')
