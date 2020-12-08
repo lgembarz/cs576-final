@@ -1,3 +1,0 @@
-import finalGadget 
-
-finalGadget.main()
