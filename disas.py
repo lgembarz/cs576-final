@@ -21,16 +21,35 @@ with open(filename, 'rb') as file:
             addr += 1
             ops = ops[1:]
 
-
-'''
 gadgets = []
 gadgetIndex = 0
 while gadgetIndex < len(disas):
         if (disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'ret'):
                 gadgets.append((disas[gadgetIndex],disas[gadgetIndex+1]))
+        if ((disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'pop') and (disas[gadgetIndex+2][1] == 'ret')):
+                gadgets.append((disas[gadgetIndex],disas[gadgetIndex+1],disas[gadgetIndex+2]))
+
         gadgetIndex = gadgetIndex + 1
+
+#remove duplicates
+gadgets.sort()
+gadgetIndex = 1
+while gadgetIndex < len(gadgets):
+        #if lengths are different, gadgets must be different
+        if len(gadgets[gadgetIndex]) != len(gadgets[gadgetIndex-1]):
+                gadgetIndex+=1
+                continue
+        gadgetIndex2 = 0
+        broke = False
+        while gadgetIndex2 < (len(gadgets[gadgetIndex])-1):
+                #if args of instructions are different, gadgets must be different
+                if gadgets[gadgetIndex][gadgetIndex2][2] != gadgets[gadgetIndex-1][gadgetIndex2][2]:
+                        gadgetIndex += 1
+                        broke = True
+                        break
+                gadgetIndex2 += 1
+        if(not broke):
+                del gadgets[gadgetIndex]
+
 for i in gadgets:
         print(i)
-        #print('\n')
-'''
-
