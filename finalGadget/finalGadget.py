@@ -1,3 +1,3 @@
-import finalGadget 
+import finalGadget
 
 finalGadget.main()
