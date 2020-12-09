@@ -23,9 +23,11 @@ with open(filename, 'rb') as file:
 
 gadgets = []
 gadgetIndex = 0
+getOneRet = True
 while gadgetIndex < len(disas):
-        '''if (disas[gadgetIndex][1] == 'ret'):
-                gadgets.append((disas[gadgetIndex],))'''
+        if ((disas[gadgetIndex][1] == 'ret') and getOneRet):
+                gadgets.append((disas[gadgetIndex],))
+                getOneRet = False
         if (disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'ret'):
                 gadgets.append((disas[gadgetIndex],disas[gadgetIndex+1]))
         if ((disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'pop') and (disas[gadgetIndex+2][1] == 'ret')):
