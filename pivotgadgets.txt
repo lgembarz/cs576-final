@@ -1,0 +1,7 @@
+0x0804889b: add esp, 0x10; nop; leave; ret;
+0x08048925: add esp, 0xc; pop ebx; pop esi; pop edi; pop ebp; ret;
+0x0804856e: add esp, 8; pop ebx; ret;
+0x0804856a: ret 0;
+0x080486be: ret 0xeac1;
+0x08048a4c: ret 0xfffd;
+0x080488c2: xchg eax, esp; ret;
