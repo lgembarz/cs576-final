@@ -1,6 +1,8 @@
 # disas.py
 
 import sys
+from codecs import encode
+import ast
 from capstone import *
 from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
@@ -21,6 +23,9 @@ def zerochecker(bytes, expectedLength):
     while len(bytes) != expectedLength:
         bytes = "0x0" + bytes[2:]
     return bytes
+
+
+
 
 with open(filename, 'rb') as file:
         elf = ELFFile(file)
@@ -131,12 +136,34 @@ baseOfStack = input("Input address of the base of the stack, including leading  
 fileForShellcode = input("Input path of file for shellcode input: ")
 shellcodeFile = open(fileForShellcode,'r')
 shellcodeTemp = shellcodeFile.read()
-print(shellcodeTemp)
-shellcodeBytes = bytes(shellcodeTemp, 'latin1')
-print(shellcodeBytes)
-shellcode = shellcodeByte
-shellcodeFile.close()
 
+#shellcodeBytes = bytes(shellcodeTemp, 'latin1')
+
+#print(shellcodeTemp)
+#shellcodeBytes = shellcodeTemp.encode(encoding='latin1')
+#print(shellcodeBytes)
+
+#shellcodeBytes=shellcodeBytes.replace(b'\\x' , b'' )
+#shellcodeBytes=shellcodeBytes[2:-2]
+#shellcodeBytes = b'0x' + shellcodeBytes
+#print(shellcodeBytes)
+#print(type(shellcodeBytes))
+#print(addressOfMprotect)
+#encoded_scbytes = shellcodeBytes.encode()
+#sh_byte_array = bytearray(shellcodeBytes)
+#print(sh_byte_array)
+#shellcode = shellcodeBytes
+
+b = shellcodeTemp
+print(b)
+c = bytearray(b, encoding='latin1')
+print(c)
+print(type(c))
+shellcode = bytearray(c.decode('unicode-escape').encode('ISO-8859-1'))
+print(shellcode)
+print(type(shellcode))
+#shellcode = encode(shellcodeString.encode().decode('unicode_escape'), "raw_unicode_escape")
+#print(shellcode)
 #shellcode = b"\x48\x31\xc0\x48\xff\xc0\x48\x31\xff\x48\xff\xc7\x48\x31\xf6\x48\x8d\x35\x29\x11\x11\x01\x48\x81\xee\x10\x11\x11\x01\x48\x31\xd2\x80\xc2\x0d\x0f\x05\x48\x31\xc0\x04\x3c\x48\x31\xff\x48\x83\xc7\x64\x0f\x05\x48\x65\x6c\x6c\x6f\x2c\x20\x77\x6f\x72\x6c\x64\x0a"
 
 faddr_byte_array = bytearray.fromhex(addressOfMprotect[2:])
