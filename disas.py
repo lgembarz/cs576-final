@@ -9,7 +9,8 @@ filename= 'a.out'
 '''
 base of binary: 0x555555554000
 address of mprotect: 0x7ffff7affc00
-start of payload: 0x7fffffffdf90
+start of buffer: 0x7fffffffdf90
+start of payload (272 A's included): 0x7fffffffe098
 base of stack: 0x7fffffffe0b0
 '''
 disas = [] #list of tuples: tup[0] = address, tup[1] = instruction, tup[2] = args
